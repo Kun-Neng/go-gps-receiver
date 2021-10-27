@@ -9,6 +9,18 @@ import (
 	"go.bug.st/serial"
 )
 
+type GPSInfo struct {
+	Longitude    string
+	Latitude     string
+	LonDirection string
+	LatDirection string
+	LonRadian    float64
+	LatRadian    float64
+	IsGPSNormal  bool
+}
+
+var GPSObject = &GPSInfo{IsGPSNormal: false}
+
 func main() {
 	ports, err := serial.GetPortsList()
 	if err != nil {
@@ -54,8 +66,11 @@ func receiveFromCom(serialPort serial.Port) {
 }
 
 func parseGPSInfo(gpsInfo string) {
+	var parseReadyFlag bool = false
+
 	strLineSlice := strings.Split(gpsInfo, "\n")
 	if 0 == len(strLineSlice) {
+		GPSObject.IsGPSNormal = false
 		return
 	}
 
@@ -64,9 +79,11 @@ func parseGPSInfo(gpsInfo string) {
 			continue
 		}
 		if '$' != oneLine[0] {
+			// Start of sentence
 			continue
 		}
 		if !strings.Contains(oneLine, "*") {
+			// Checksum delimiter
 			continue
 		}
 		if !strings.Contains(oneLine, "N") && !strings.Contains(oneLine, "S") {
@@ -78,11 +95,19 @@ func parseGPSInfo(gpsInfo string) {
 
 		if strings.Contains(oneLine, "GNGGA") {
 			fmt.Printf("%v", oneLine)
+			parseReadyFlag = true
 			break
 		}
 		if strings.Contains(oneLine, "GNRMC") {
 			fmt.Printf("%v", oneLine)
+			parseReadyFlag = true
 			break
 		}
+	}
+
+	if true == parseReadyFlag {
+		GPSObject.IsGPSNormal = true
+	} else {
+		GPSObject.IsGPSNormal = false
 	}
 }
