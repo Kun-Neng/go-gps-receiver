@@ -94,12 +94,15 @@ func parseGPSInfo(gpsInfo string) {
 		}
 
 		if strings.Contains(oneLine, "GNGGA") {
-			fmt.Printf("%v", oneLine)
+			// fmt.Printf("%v", oneLine)
+			if false == parseGNGGA(oneLine) {
+				continue
+			}
 			parseReadyFlag = true
 			break
 		}
 		if strings.Contains(oneLine, "GNRMC") {
-			fmt.Printf("%v", oneLine)
+			// fmt.Printf("%v", oneLine)
 			parseReadyFlag = true
 			break
 		}
@@ -107,7 +110,22 @@ func parseGPSInfo(gpsInfo string) {
 
 	if true == parseReadyFlag {
 		GPSObject.IsGPSNormal = true
+		fmt.Println(GPSObject.Latitude, GPSObject.Longitude)
 	} else {
 		GPSObject.IsGPSNormal = false
 	}
+}
+
+func parseGNGGA(gnggaInfo string) bool {
+	strSlice := strings.Split(gnggaInfo, ",")
+	if 3 > len(strSlice[2]) || 4 > len(strSlice[4]) {
+		return false
+	}
+
+	GPSObject.LatDirection = strSlice[3] // N/S
+	GPSObject.LonDirection = strSlice[5] // E/W
+	GPSObject.Latitude = strSlice[2][:2] + "度" + strSlice[2][2:] + "分" + strSlice[3]
+	GPSObject.Longitude = strSlice[4][:3] + "度" + strSlice[4][3:] + "分" + strSlice[5]
+
+	return true
 }
