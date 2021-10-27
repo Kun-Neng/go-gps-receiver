@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"go.bug.st/serial"
@@ -46,6 +47,42 @@ func receiveFromCom(serialPort serial.Port) {
 			fmt.Println("\nEOF")
 			break
 		}
-		fmt.Printf("%v", string(buff[:n]))
+		// fmt.Printf("%v", string(buff[:n]))
+
+		parseGPSInfo(string(buff[:n]))
+	}
+}
+
+func parseGPSInfo(gpsInfo string) {
+	strLineSlice := strings.Split(gpsInfo, "\n")
+	if 0 == len(strLineSlice) {
+		return
+	}
+
+	for _, oneLine := range strLineSlice {
+		if 0 == len(oneLine) {
+			continue
+		}
+		if '$' != oneLine[0] {
+			continue
+		}
+		if !strings.Contains(oneLine, "*") {
+			continue
+		}
+		if !strings.Contains(oneLine, "N") && !strings.Contains(oneLine, "S") {
+			continue
+		}
+		if !strings.Contains(oneLine, "E") && !strings.Contains(oneLine, "W") {
+			continue
+		}
+
+		if strings.Contains(oneLine, "GNGGA") {
+			fmt.Printf("%v", oneLine)
+			break
+		}
+		if strings.Contains(oneLine, "GNRMC") {
+			fmt.Printf("%v", oneLine)
+			break
+		}
 	}
 }
