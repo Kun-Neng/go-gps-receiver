@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"go.bug.st/serial"
 )
@@ -28,8 +29,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	buff := make([]byte, 100)
+	receiveFromCom(serialPort)
+}
+
+func receiveFromCom(serialPort serial.Port) {
+	buff := make([]byte, 512)
 	for {
+		time.Sleep(time.Second)
+
 		n, err := serialPort.Read(buff)
 		if err != nil {
 			log.Fatal(err)
