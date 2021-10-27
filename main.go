@@ -19,7 +19,10 @@ type GPSInfo struct {
 	IsGPSNormal  bool
 }
 
-var GPSObject = &GPSInfo{IsGPSNormal: false}
+var (
+	directionMap = map[string]string{"N": "北緯", "S": "南緯", "E": "東經", "W": "西經"}
+	GPSObject    = &GPSInfo{IsGPSNormal: false}
+)
 
 func main() {
 	ports, err := serial.GetPortsList()
@@ -124,8 +127,8 @@ func parseGNGGA(gnggaInfo string) bool {
 
 	GPSObject.LatDirection = strSlice[3] // N/S
 	GPSObject.LonDirection = strSlice[5] // E/W
-	GPSObject.Latitude = strSlice[2][:2] + "度" + strSlice[2][2:] + "分" + strSlice[3]
-	GPSObject.Longitude = strSlice[4][:3] + "度" + strSlice[4][3:] + "分" + strSlice[5]
+	GPSObject.Latitude = directionMap[strSlice[3]] + strSlice[2][:2] + "度" + strSlice[2][2:] + "分"
+	GPSObject.Longitude = directionMap[strSlice[5]] + strSlice[4][:3] + "度" + strSlice[4][3:] + "分"
 
 	return true
 }
