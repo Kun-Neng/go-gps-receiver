@@ -59,7 +59,7 @@ func main() {
 	}
 	fmt.Println(time.Now().In(localTime).Format(timeLayout))
 
-	receiveFromCom(*ComObject.SerialPort)
+	ComObject.ReceiveFromCom()
 }
 
 func (this *Com) GetPortName() bool {
@@ -103,12 +103,14 @@ func (this *Com) Close() {
 	this.CloseChannel <- true
 }
 
-func receiveFromCom(serialPort serial.Port) {
+func (this *Com) ReceiveFromCom() {
+	defer this.Close()
+
 	buff := make([]byte, 512)
 	for {
 		time.Sleep(time.Second)
 
-		n, err := serialPort.Read(buff)
+		n, err := (*this.SerialPort).Read(buff)
 		if err != nil {
 			log.Fatal(err)
 			break
