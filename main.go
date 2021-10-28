@@ -98,6 +98,11 @@ func (this *Com) OpenComPort() (err error) {
 	return nil
 }
 
+func (this *Com) Close() {
+	(*this.SerialPort).Close()
+	this.CloseChannel <- true
+}
+
 func receiveFromCom(serialPort serial.Port) {
 	buff := make([]byte, 512)
 	for {
