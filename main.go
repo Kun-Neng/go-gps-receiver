@@ -46,12 +46,11 @@ func main() {
 		defaultPortName = ComObject.PortName
 	}
 
-	mode := &serial.Mode{
-		BaudRate: 115200,
-	}
-	serialPort, err := serial.Open(ComObject.PortName, mode)
+	err := ComObject.OpenComPort()
 	if err != nil {
-		log.Fatal(err)
+		GPSObject.IsGPSNormal = false
+	} else {
+		ComObject.IsComNormal = true
 	}
 
 	localTime, err := time.LoadLocation(localTimeZone)
@@ -60,7 +59,7 @@ func main() {
 	}
 	fmt.Println(time.Now().In(localTime).Format(timeLayout))
 
-	receiveFromCom(serialPort)
+	receiveFromCom(*ComObject.SerialPort)
 }
 
 func (this *Com) GetPortName() bool {
@@ -81,6 +80,22 @@ func (this *Com) GetPortName() bool {
 	this.PortName = ports[0]
 
 	return true
+}
+
+func (this *Com) OpenComPort() (err error) {
+	mode := &serial.Mode{
+		BaudRate: this.BaudRate,
+	}
+
+	serialPort, err := serial.Open(this.PortName, mode)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+
+	this.SerialPort = &serialPort
+
+	return nil
 }
 
 func receiveFromCom(serialPort serial.Port) {
