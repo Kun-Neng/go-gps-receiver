@@ -17,15 +17,17 @@ type GPSInfo struct {
 	LatDirection string
 	LonRadian    float64
 	LatRadian    float64
-	messageFrom  string
+	MessageFrom  string
 	IsGPSNormal  bool
 }
 
 var (
-	minLatLen    = 3
-	minLonLen    = 4
-	directionMap = map[string]string{"N": "北緯", "S": "南緯", "E": "東經", "W": "西經"}
-	GPSObject    = &GPSInfo{IsGPSNormal: false}
+	localTimeZone = "Asia/Taipei"
+	timeLayout    = "2006-01-02 15:04:05"
+	minLatLen     = 3
+	minLonLen     = 4
+	directionMap  = map[string]string{"N": "北緯", "S": "南緯", "E": "東經", "W": "西經"}
+	GPSObject     = &GPSInfo{IsGPSNormal: false}
 )
 
 func main() {
@@ -48,6 +50,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	localTime, err := time.LoadLocation(localTimeZone)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(time.Now().In(localTime).Format(timeLayout))
 
 	receiveFromCom(serialPort)
 }
@@ -102,7 +110,7 @@ func parseGPSInfo(gpsInfo string) {
 
 		if strings.Contains(oneLine, "GPRMC") || strings.Contains(oneLine, "GNRMC") {
 			// fmt.Printf("%v", oneLine)
-			parseDateTime(oneLine)
+			fmt.Println(parseDateTime(oneLine))
 			if false == parseLatLon(oneLine, 3, 5) {
 				continue
 			}
@@ -123,22 +131,46 @@ func parseGPSInfo(gpsInfo string) {
 
 	if true == parseLatLonReadyFlag {
 		GPSObject.IsGPSNormal = true
-		fmt.Println(GPSObject.messageFrom, GPSObject.Latitude, GPSObject.Longitude)
+		fmt.Println(GPSObject.MessageFrom, GPSObject.Latitude, GPSObject.Longitude)
 	} else {
 		GPSObject.IsGPSNormal = false
 	}
 }
 
-func parseDateTime(oneLineInfo string) {
+func parseDateTime(oneLineInfo string) string {
 	strSlice := strings.Split(oneLineInfo, ",")
+
 	timeToken := strSlice[1]
+	// hour, _ := strconv.Atoi(timeToken[:2])
+	// min, _ := strconv.Atoi(timeToken[2:4])
+	// sec, _ := strconv.Atoi(timeToken[4:6])
+	// msec, _ := strconv.Atoi(timeToken[7:9])
+	// nsec := 1000 * msec
 
 	dateToken := strSlice[9]
-	year := dateToken[4:6]
-	month := dateToken[2:4]
-	day := dateToken[0:2]
+	// year, _ := strconv.Atoi("20" + dateToken[4:6])
+	// month, _ := strconv.Atoi(dateToken[2:4])
+	// timeMonth := time.Month(month)
+	// day, _ := strconv.Atoi(dateToken[0:2])
+	// fmt.Printf("%d年%d月%d日\n", year, month, day)
 
-	fmt.Printf("20%s 年 %s 月 %s 日 %v\n", year, month, day, timeToken)
+	// timeString := time.Date(year, timeMonth, day, hour, min, sec, nsec, time.UTC).String()
+
+	location, err := time.LoadLocation(localTimeZone)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	timeStringArray := []string{"20", dateToken[4:6], "-", dateToken[2:4], "-", dateToken[0:2], " ", timeToken[:2], ":", timeToken[2:4], ":", timeToken[4:6]}
+	timeString := strings.Join(timeStringArray, "")
+	// fmt.Println(timeString)
+	timeInUTC, _ := time.Parse(timeLayout, timeString)
+	// fmt.Println(timeInUTC)
+
+	timeInLocation := timeInUTC.In(location)
+	// fmt.Println(timeInLocation)
+
+	return timeInLocation.String()
 }
 
 func parseLatLon(oneLineInfo string, iLat int, iLon int) bool {
@@ -163,7 +195,7 @@ func parseLatLon(oneLineInfo string, iLat int, iLon int) bool {
 	tmpDecimalPartLon, _ := strconv.ParseFloat(strSlice[iLon][3:], 32)
 	GPSObject.LonRadian = tmpIntPartLon + tmpDecimalPartLon/60
 
-	GPSObject.messageFrom = strSlice[0]
+	GPSObject.MessageFrom = strSlice[0]
 
 	return true
 }
