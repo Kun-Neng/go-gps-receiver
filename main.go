@@ -205,6 +205,10 @@ func parseDateTime(oneLineInfo string) string {
 
 	// timeString := time.Date(year, timeMonth, day, hour, min, sec, nsec, time.UTC).String()
 
+	if len(dateToken) < 6 {
+		return ""
+	}
+
 	location, err := time.LoadLocation(localTimeZone)
 	if err != nil {
 		log.Fatal(err)
