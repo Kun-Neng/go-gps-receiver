@@ -10,6 +10,14 @@ import (
 	"go.bug.st/serial"
 )
 
+type Com struct {
+	PortName     string
+	BaudRate     int
+	SerialPort   *serial.Port
+	CloseChannel chan bool
+	IsComNormal  bool
+}
+
 type GPSInfo struct {
 	Longitude    string
 	Latitude     string
@@ -22,33 +30,27 @@ type GPSInfo struct {
 }
 
 var (
-	localTimeZone = "Asia/Taipei"
-	timeLayout    = "2006-01-02 15:04:05"
-	minLatLen     = 3
-	minLonLen     = 4
-	directionMap  = map[string]string{"N": "北緯", "S": "南緯", "E": "東經", "W": "西經"}
-	GPSObject     = &GPSInfo{IsGPSNormal: false}
+	defaultPortName = "COM7"
+	ComObject       = &Com{PortName: defaultPortName, BaudRate: 115200, CloseChannel: make(chan bool, 1), IsComNormal: false}
+	localTimeZone   = "Asia/Taipei"
+	timeLayout      = "2006-01-02 15:04:05"
+	minLatLen       = 3
+	minLonLen       = 4
+	directionMap    = map[string]string{"N": "北緯", "S": "南緯", "E": "東經", "W": "西經"}
+	GPSObject       = &GPSInfo{IsGPSNormal: false}
 )
 
 func main() {
-	ports, err := serial.GetPortsList()
-	if err != nil {
-		log.Fatal(err)
-	}
-	if len(ports) == 0 {
-		log.Fatal("No serial ports found!")
-	} else {
-		for _, port := range ports {
-			fmt.Printf("Found port: %v\n", port)
-		}
+	ComObject.PortName = defaultPortName
+	if true == ComObject.GetPortName() {
+		defaultPortName = ComObject.PortName
 	}
 
-	mode := &serial.Mode{
-		BaudRate: 115200,
-	}
-	serialPort, err := serial.Open("COM7", mode)
+	err := ComObject.OpenComPort()
 	if err != nil {
-		log.Fatal(err)
+		GPSObject.IsGPSNormal = false
+	} else {
+		ComObject.IsComNormal = true
 	}
 
 	localTime, err := time.LoadLocation(localTimeZone)
@@ -57,15 +59,58 @@ func main() {
 	}
 	fmt.Println(time.Now().In(localTime).Format(timeLayout))
 
-	receiveFromCom(serialPort)
+	ComObject.ReceiveFromCom()
 }
 
-func receiveFromCom(serialPort serial.Port) {
+func (this *Com) GetPortName() bool {
+	ports, err := serial.GetPortsList()
+	if err != nil {
+		log.Fatal(err)
+		return false
+	}
+	if len(ports) == 0 {
+		log.Fatal("No serial ports found!")
+		return false
+	}
+
+	for _, port := range ports {
+		fmt.Printf("Found port: %v\n", port)
+	}
+
+	this.PortName = ports[0]
+
+	return true
+}
+
+func (this *Com) OpenComPort() (err error) {
+	mode := &serial.Mode{
+		BaudRate: this.BaudRate,
+	}
+
+	serialPort, err := serial.Open(this.PortName, mode)
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+
+	this.SerialPort = &serialPort
+
+	return nil
+}
+
+func (this *Com) Close() {
+	(*this.SerialPort).Close()
+	this.CloseChannel <- true
+}
+
+func (this *Com) ReceiveFromCom() {
+	defer this.Close()
+
 	buff := make([]byte, 512)
 	for {
 		time.Sleep(time.Second)
 
-		n, err := serialPort.Read(buff)
+		n, err := (*this.SerialPort).Read(buff)
 		if err != nil {
 			log.Fatal(err)
 			break
