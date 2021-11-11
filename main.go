@@ -59,6 +59,10 @@ func main() {
 	}
 	fmt.Println(time.Now().In(localTime).Format(timeLayout))
 
+	StartToReceive()
+}
+
+func StartToReceive() {
 	ComObject.ReceiveFromCom()
 }
 
