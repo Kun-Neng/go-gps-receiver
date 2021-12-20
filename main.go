@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"runtime"
 	"strings"
 	"time"
 
 	"go.bug.st/serial"
+	"go.bug.st/serial/enumerator"
 )
 
 type Com struct {
@@ -39,40 +41,53 @@ var (
 )
 
 func main() {
-	fmt.Println("OS:", runtime.GOOS)
+	log.Println("OS:", runtime.GOOS)
 
-	if ok := ScanPorts(); ok {
-		reader := bufio.NewReader(os.Stdin)
-		fmt.Print("Enter port name: ")
-		port, err := reader.ReadString('\n')
-		if err != nil {
-			log.Fatal(err)
-		}
-		port = trimInput(runtime.GOOS, port)
+	cmd := exec.Command("whoami")
+	user, _ := cmd.Output()
+	log.Printf("User name: %s", user)
 
-		hasPort := contains(Ports, port)
-		if hasPort == false {
-			log.Printf("Port %s doesn't exist!\n", port)
-			return
-		}
+	cmd = exec.Command("ls", "-al")
+	output, _ := cmd.Output()
+	log.Printf("%s", output)
 
-		log.Println("Receive from port", port)
-		InitDevice(Ports[0], 115200)
-		go Receive(1000)
-		go func() {
-			for {
-				gpsInfo := <-ComObject.DataChannel
-				fmt.Printf("%v", gpsInfo)
+	for {
+		if ok := ScanPorts(); ok {
+			reader := bufio.NewReader(os.Stdin)
+			fmt.Print("Enter port name: ")
+			port, err := reader.ReadString('\n')
+			if err != nil {
+				log.Fatal(err)
 			}
-		}()
+			port = trimInput(runtime.GOOS, port)
 
-		for {
+			hasPort := contains(Ports, port)
+			if port == "" || hasPort == false {
+				log.Printf("Port %s doesn't exist!\n", port)
+				return
+			}
+
+			log.Println("Receive from port", port)
+			InitDevice(port, 115200)
+			go Receive(1000)
+			go func() {
+				for {
+					gpsInfo := <-ComObject.DataChannel
+					fmt.Printf("%v", gpsInfo)
+				}
+			}()
+
+			for {
+			}
+		} else {
+			time.Sleep(time.Second)
 		}
 	}
 }
 
 func ScanPorts() bool {
-	ports, err := serial.GetPortsList()
+	// ports, err := serial.GetPortsList()
+	ports, err := enumerator.GetDetailedPortsList()
 	if err != nil {
 		log.Fatal(err)
 		return false
@@ -84,7 +99,7 @@ func ScanPorts() bool {
 	}
 
 	for _, port := range ports {
-		Ports = append(Ports, port)
+		Ports = append(Ports, port.Name)
 	}
 	log.Printf("Found port: %v\n", Ports)
 
