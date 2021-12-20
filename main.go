@@ -1,8 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
+	"os"
+	"runtime"
+	"strings"
 	"time"
 
 	"go.bug.st/serial"
@@ -35,7 +39,24 @@ var (
 )
 
 func main() {
+	fmt.Println("OS:", runtime.GOOS)
+
 	if ok := ScanPorts(); ok {
+		reader := bufio.NewReader(os.Stdin)
+		fmt.Print("Enter port name: ")
+		port, err := reader.ReadString('\n')
+		if err != nil {
+			log.Fatal(err)
+		}
+		port = trimInput(runtime.GOOS, port)
+
+		hasPort := contains(Ports, port)
+		if hasPort == false {
+			log.Printf("Port %s doesn't exist!\n", port)
+			return
+		}
+
+		log.Println("Receive from port", port)
 		InitDevice(Ports[0], 115200)
 		go Receive(1000)
 		go func() {
@@ -147,4 +168,21 @@ func (com *Com) Close() {
 	(*com.SerialPort).Close()
 	close(com.DataChannel)
 	com.CloseChannel <- true
+}
+
+func trimInput(os string, str string) string {
+	if os == "windows" {
+		return strings.TrimRight(str, "\r\n")
+	} else {
+		return strings.TrimRight(str, "\n")
+	}
+}
+
+func contains(strArray []string, str string) bool {
+	for _, v := range strArray {
+		if v == str {
+			return true
+		}
+	}
+	return false
 }
