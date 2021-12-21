@@ -7,11 +7,16 @@ import (
 	"time"
 
 	zmq "github.com/go-zeromq/zmq4"
+	"github.com/vmihailenco/msgpack/v5"
 )
+
+type Message struct {
+	Content string
+}
 
 type publisher struct {
 	socket       zmq.Socket
-	data         string
+	message      Message
 	closeChannel chan bool
 	ListenLocal  func()
 	Listen       func(string)
@@ -57,8 +62,13 @@ func GetInstance() *publisher {
 }
 
 func Send() {
-	message := zmq.NewMsgFrom([]byte(Publisher.data))
-	err := Publisher.socket.Send(message)
+	byteArray, err := msgpack.Marshal(&Publisher.message)
+	if err != nil {
+		panic(err)
+	}
+
+	msg := zmq.NewMsgFrom([]byte(byteArray))
+	err = Publisher.socket.Send(msg)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -85,7 +95,7 @@ func listen(endpoint string) {
 }
 
 func update(data string) {
-	Publisher.data = data
+	Publisher.message = Message{Content: data}
 }
 
 func routine() {
