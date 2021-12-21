@@ -56,6 +56,19 @@ func GetInstance() *publisher {
 	return Publisher
 }
 
+func Send() {
+	message := zmq.NewMsgFrom([]byte(Publisher.data))
+	err := Publisher.socket.Send(message)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func Close() {
+	close(Publisher.closeChannel)
+	Publisher.socket.Close()
+}
+
 func listenLocal5555() {
 	listen("tcp://*:5555")
 }
@@ -82,7 +95,8 @@ func routine() {
 		select {
 		case <-chWork:
 			Send()
-			time.Sleep(250 * time.Millisecond)
+			// time.Sleep(250 * time.Millisecond)
+			time.Sleep(1 * time.Second)
 		case _, ok := <-chControl:
 			if ok {
 				continue
@@ -122,17 +136,4 @@ func wait() {
 func quit() {
 	chWork = nil
 	close(chControl)
-}
-
-func Send() {
-	message := zmq.NewMsgFrom([]byte(Publisher.data))
-	err := Publisher.socket.Send(message)
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func Close() {
-	close(Publisher.closeChannel)
-	Publisher.socket.Close()
 }

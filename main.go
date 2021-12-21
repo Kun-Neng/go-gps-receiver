@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Kun-Neng/go-gps-receiver/v0.1.0/publisher"
+	"github.com/enescakir/emoji"
 	"go.bug.st/serial"
 	"go.bug.st/serial/enumerator"
 )
@@ -44,16 +45,16 @@ var (
 )
 
 func main() {
-	log.Println("Author: Kun-Neng Hung")
+	log.Println("Author: Kun-Neng Hung", emoji.ManTechnologist)
 	log.Println("OS:", runtime.GOOS)
 
 	cmd := exec.Command("whoami")
 	user, _ := cmd.Output()
 	log.Printf("User name: %s", user)
 
-	cmd = exec.Command("ls", "-al")
+	/*cmd = exec.Command("ls", "-al")
 	output, _ := cmd.Output()
-	log.Printf("%s", output)
+	log.Printf("%s", output)*/
 
 	// Publisher.Listen("tcp://*:5555")
 	Publisher.ListenLocal()
@@ -79,7 +80,7 @@ func main() {
 
 			InitDevice(port, defaultBaudRate)
 
-			log.Println("Publishing data every 250 milliseconds ...")
+			log.Println("Publishing data every 1 second ...")
 			Publisher.Start()
 			go Receive(1000)
 			go Send()
