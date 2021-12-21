@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Kun-Neng/go-gps-receiver/v0.1.0/publisher"
 	"go.bug.st/serial"
 	"go.bug.st/serial/enumerator"
 )
@@ -38,9 +39,12 @@ var (
 		CloseChannel: make(chan bool, 1),
 		IsComNormal:  false,
 	}
+
+	Publisher = publisher.GetInstance()
 )
 
 func main() {
+	log.Println("Author: Kun-Neng Hung")
 	log.Println("OS:", runtime.GOOS)
 
 	cmd := exec.Command("whoami")
@@ -51,7 +55,13 @@ func main() {
 	output, _ := cmd.Output()
 	log.Printf("%s", output)
 
+	// Publisher.Listen("tcp://*:5555")
+	Publisher.ListenLocal()
+	defer Publisher.Quit()
+
 	for {
+		Ports = []string{}
+
 		if ok := ScanPorts(); ok {
 			reader := bufio.NewReader(os.Stdin)
 			fmt.Print("Enter port name: ")
@@ -64,18 +74,15 @@ func main() {
 			hasPort := contains(Ports, port)
 			if port == "" || hasPort == false {
 				log.Printf("Port %s doesn't exist!\n", port)
-				return
+				continue
 			}
 
-			log.Println("Receive from port", port)
-			InitDevice(port, 115200)
+			InitDevice(port, defaultBaudRate)
+
+			log.Println("Publishing data every 250 milliseconds ...")
+			Publisher.Start()
 			go Receive(1000)
-			go func() {
-				for {
-					gpsInfo := <-ComObject.DataChannel
-					fmt.Printf("%v", gpsInfo)
-				}
-			}()
+			go Send()
 
 			for {
 			}
@@ -121,11 +128,19 @@ func InitDevice(port string, baudrate int) {
 		ComObject.IsComNormal = true
 	}
 
-	log.Println("Init Device")
+	log.Println("Init Device", ComObject.PortName, ComObject.BaudRate)
 }
 
 func Receive(millisecond int64) {
 	ComObject.ReceiveFromCom(millisecond)
+}
+
+func Send() {
+	for {
+		data := <-ComObject.DataChannel
+		// fmt.Printf("%v", data)
+		Publisher.Update(data)
+	}
 }
 
 func CloseDevice() {
